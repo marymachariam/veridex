@@ -5,7 +5,6 @@ from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
 
 from core.config import settings
 
@@ -42,16 +41,18 @@ def _extract_json(text: str) -> Dict[str, Any]:
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("No JSON object found in model output")
-    return json.loads(text[start:end + 1])
+    candidate = text[start:end + 1]
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        from json_repair import repair_json
+        return json.loads(repair_json(candidate))
 
 
 def generate_battlecard(competitor_name: str, pricing: list, features: list, insight: dict) -> Dict[str, Any]:
-    if settings.OPENAI_API_KEY:
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key=settings.OPENAI_API_KEY, temperature=0.2)
-    elif settings.GROQ_API_KEY:
-        llm = ChatGroq(model="openai/gpt-oss-120b", api_key=settings.GROQ_API_KEY, temperature=0.2)
-    else:
-        raise RuntimeError("No LLM API key configured on the server")
+    keys = settings.groq_api_key_list
+    if not keys:
+        raise RuntimeError("No GROQ_API_KEYS configured on the server")
 
     input_data = {
         "competitor_name": competitor_name,
@@ -59,14 +60,21 @@ def generate_battlecard(competitor_name: str, pricing: list, features: list, ins
         "features": features,
         "insight": insight,
     }
-    response = llm.invoke([
+    messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=json.dumps(input_data, indent=2)),
-    ])
-    text = response.content if isinstance(response.content, str) else str(response.content)
+    ]
 
-    try:
-        return _extract_json(text)
-    except (ValueError, json.JSONDecodeError) as exc:
-        logger.error("Failed to parse battlecard JSON: %s", text[:500])
-        raise RuntimeError("Could not generate the battlecard. Try again.") from exc
+    last_error = None
+    for key in keys:
+        try:
+            llm = ChatGroq(model="openai/gpt-oss-120b", api_key=key, temperature=0.2, max_retries=0, timeout=45)
+            response = llm.invoke(messages)
+            text = response.content if isinstance(response.content, str) else str(response.content)
+            return _extract_json(text)
+        except Exception as exc:
+            logger.warning("Battlecard generation failed on one key: %s", exc)
+            last_error = exc
+
+    logger.error("All Groq keys failed for battlecard on %s", competitor_name)
+    raise RuntimeError("Could not generate the battlecard. Try again.") from last_error
