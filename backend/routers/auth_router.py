@@ -264,7 +264,7 @@ def google_callback(
         payload = UserRegister(
             email=email,
             username=username,
-            password=secrets.token_urlsafe(32),  # unusable random password
+            password=secrets.token_urlsafe(32), 
             first_name=first,
             last_name=last,
             company_name=f"{first}'s Company",
