@@ -58,7 +58,7 @@ STEPS = [
         "icon": "",
         "title": "Plans & Billing",
         "body": "Your trial lasts 14 days. When you're ready, the **Billing** page lets you pick a plan and "
-                "pay with PayPal or M-Pesa.",
+                "pay with PayPal.",
     },
     {
         "icon": "",

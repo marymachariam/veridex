@@ -23,45 +23,51 @@ class Settings(BaseSettings):
 
     TRIAL_DAYS: int = 14
     CORS_ORIGINS: List[str] = ["http://localhost:8501", "http://localhost:3000"]
-    GROQ_API_KEY: str = ""
     FRONTEND_URL: str = "http://localhost:8501"
+
+    # Research agent
+    GROQ_API_KEY: str = ""
+    GROQ_API_KEYS: str = ""
+    GEMINI_API_KEYS: str = ""
     TAVILY_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+
+    # Chatbot (separate Groq key)
+    GROQ_BOT_API_KEY: str = ""
+    GROQ_BOT_MODEL: str = "openai/gpt-oss-120b"
+
+    # Google login
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+
+    # PayPal
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_CLIENT_SECRET: str = ""
     PAYPAL_MODE: str = "sandbox"
     PAYPAL_WEBHOOK_ID: str = ""
-    
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = ""
-    
-    GROQ_BOT_API_KEY: str = ""
-    GROQ_BOT_MODEL: str = "openai/gpt-oss-120b"
 
-    @property
-    def paypal_base_url(self) -> str:
-        return "https://api-m.sandbox.paypal.com" if self.PAYPAL_MODE == "sandbox" else "https://api-m.paypal.com"
-     
-     
+    # M-Pesa (Daraja)
     MPESA_CONSUMER_KEY: str = ""
     MPESA_CONSUMER_SECRET: str = ""
     MPESA_SHORTCODE: str = ""
     MPESA_PASSKEY: str = ""
     MPESA_ENV: str = "sandbox"
     MPESA_CALLBACK_URL: str = ""
-    
+    MPESA_CALLBACK_SECRET: str = ""
+
+    # Email
     BREVO_API_KEY: str = ""
     EMAIL_FROM_ADDRESS: str = "maryymachariam@gmail.com"
     EMAIL_FROM_NAME: str = "VERIDEX"
 
     @property
+    def paypal_base_url(self) -> str:
+        return "https://api-m.sandbox.paypal.com" if self.PAYPAL_MODE == "sandbox" else "https://api-m.paypal.com"
+
+    @property
     def mpesa_base_url(self) -> str:
         return "https://sandbox.safaricom.co.ke" if self.MPESA_ENV == "sandbox" else "https://api.safaricom.co.ke"
-    
-    
-    GROQ_API_KEYS: str = ""
-    GEMINI_API_KEYS: str = ""
 
     @property
     def groq_api_key_list(self) -> list:
@@ -70,6 +76,7 @@ class Settings(BaseSettings):
     @property
     def gemini_api_key_list(self) -> list:
         return [k.strip() for k in self.GEMINI_API_KEYS.split(",") if k.strip()]
+
     @field_validator("SECRET_KEY")
     @classmethod
     def _secret_is_strong(cls, v: str) -> str:
@@ -83,7 +90,6 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL")
     @classmethod
     def _normalize_db_url(cls, v: str) -> str:
-        # Hosting providers often hand out postgres:// or postgresql:// URLs.
         for prefix in ("postgres://", "postgresql://"):
             if v.startswith(prefix):
                 return "postgresql+psycopg2://" + v[len(prefix):]

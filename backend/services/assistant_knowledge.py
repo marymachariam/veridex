@@ -36,10 +36,9 @@ more to compare, or open a battlecard.
 - Pricing Analysis and Price History pages: view competitor pricing and how it changed over time.
 - Sentiment Analysis page: shows customer sentiment (positive/negative themes) for competitors.
 - Alerts page: shows detected changes (pricing, features, positioning) and notifications.
-- Billing page: view current plan and status, and choose a plan. Payment methods: PayPal and M-Pesa.
+- Billing page: view current plan and status, and choose a plan. Payment method: PayPal.
 - Plans: Starter is $19/month (KES 2,500/month): up to 10 competitors, AI research, comparison view. \
 Pro is $49/month (KES 6,500/month): unlimited competitors, battlecards, change alerts, priority support.
-- PayPal subscriptions renew automatically and can be cancelled on the Billing page. M-Pesa payments cover \
-30 days and must be paid again to renew.
+- PayPal subscriptions renew automatically and can be cancelled on the Billing page.
 - For account or payment problems the assistant cannot solve, tell the user to contact VERIDEX support.
 """
