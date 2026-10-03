@@ -114,7 +114,7 @@ with s1:
 with s2:
     st.markdown("<div style='text-align: center;'><p class='stat-number'>2 min</p><p class='stat-label'>To Full Competitor Report</p></div>", unsafe_allow_html=True)
 with s3:
-    st.markdown("<div style='text-align: center;'><p class='stat-number'>M-Pesa</p><p class='stat-label'>& PayPal Supported</p></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center;'><p class='stat-number'>PayPal</p><p class='stat-label'>Secure Payments</p></div>", unsafe_allow_html=True)
 with s4:
     st.markdown("<div style='text-align: center;'><p class='stat-number'>14 Days</p><p class='stat-label'>Free Trial</p></div>", unsafe_allow_html=True)
 st.divider()

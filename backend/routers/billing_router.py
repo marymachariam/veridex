@@ -1,10 +1,10 @@
 import logging
+import secrets
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-import secrets
 
 from core.clock import utcnow
 from core.config import settings
@@ -23,7 +23,12 @@ from schemas.billing_schema import (
 )
 from security.deps import get_current_user, require_role
 from services.mpesa_service import normalize_phone, stk_push
-from services.paypal_service import cancel_subscription, create_subscription, get_subscription, verify_webhook_signature
+from services.paypal_service import (
+    cancel_subscription,
+    create_subscription,
+    get_subscription,
+    verify_webhook_signature,
+)
 
 logger = logging.getLogger("veridex.billing")
 router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
@@ -119,7 +124,10 @@ def paypal_cancel(user: User = Depends(require_role(UserRole.ADMIN)), db: Sessio
 
 @router.post("/paypal/webhook")
 async def paypal_webhook(request: Request, db: Session = Depends(get_db)):
+    """PayPal calls this when a subscription event happens (activated, payment completed, cancelled, etc.)
+    No auth dependency here - PayPal itself is the caller, and we verify its signature."""
     event = await request.json()
+
     try:
         verified = verify_webhook_signature(request.headers, event)
     except Exception:
@@ -129,8 +137,6 @@ async def paypal_webhook(request: Request, db: Session = Depends(get_db)):
         logger.warning("PayPal webhook with invalid signature rejected")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    event_type = event.get("event_type", "")
-    resource = event.get("resource", {})
     event_type = event.get("event_type", "")
     resource = event.get("resource", {})
 

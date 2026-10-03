@@ -7,17 +7,19 @@ from config import settings, Icons
 from utils.theme import apply_theme
 from components.chatbot import render_chatbot
 
+# Flip to True to show the M-Pesa payment option again.
+ENABLE_MPESA = False
+
 st.set_page_config(page_title=f"{settings.APP_NAME} - Billing", layout="wide")
 apply_theme()
 render_chatbot()
-
 
 if "token" not in st.session_state:
     st.switch_page("pages/01_Login.py")
 
 headers = {"Authorization": f"Bearer {st.session_state.token}"}
 
-st.markdown(f"#  Billing & Plans")
+st.markdown("#  Billing & Plans")
 
 # Handle PayPal redirect back to this page (?paypal_status=success/cancelled)
 params = st.query_params
@@ -70,15 +72,22 @@ for col, plan in zip(cols, PLANS):
     with col:
         with st.container(border=True):
             st.markdown(f"### {plan['name']}")
-            st.markdown(f"**${plan['usd']}/mo** (USD) · **KES {plan['kes']:,}/mo**")
+            if ENABLE_MPESA:
+                st.markdown(f"**${plan['usd']}/mo** (USD) · **KES {plan['kes']:,}/mo**")
+            else:
+                st.markdown(f"**${plan['usd']}/mo**")
             for f in plan["features"]:
                 st.write(f"✓ {f}")
 
             st.write("")
-            tab_paypal, tab_mpesa = st.tabs(["Pay with PayPal", "Pay with M-Pesa"])
+
+            if ENABLE_MPESA:
+                tab_paypal, tab_mpesa = st.tabs(["Pay with PayPal", "Pay with M-Pesa"])
+            else:
+                tab_paypal, tab_mpesa = st.container(), None
 
             with tab_paypal:
-                if st.button(f"Subscribe via PayPal", key=f"paypal_{plan['key']}", type="primary", width='stretch'):
+                if st.button("Subscribe via PayPal", key=f"paypal_{plan['key']}", type="primary", width='stretch'):
                     with st.spinner("Redirecting to PayPal..."):
                         try:
                             r = requests.post(
@@ -103,31 +112,32 @@ for col, plan in zip(cols, PLANS):
                                 detail = "Could not start checkout."
                             st.error(detail)
 
-            with tab_mpesa:
-                phone = st.text_input("M-Pesa phone number", placeholder="0712345678", key=f"phone_{plan['key']}")
-                if st.button(f"Pay with M-Pesa", key=f"mpesa_{plan['key']}", type="primary", width='stretch'):
-                    if not phone:
-                        st.error("Enter your phone number.")
-                    else:
-                        with st.spinner("Sending M-Pesa prompt to your phone..."):
-                            try:
-                                r = requests.post(
-                                    f"{settings.API_BASE_URL}/api/v1/billing/mpesa/stk-push",
-                                    json={"plan": plan["key"], "phone_number": phone},
-                                    headers=headers,
-                                    timeout=30,
-                                )
-                            except requests.RequestException:
-                                st.error("Could not reach the server.")
-                                r = None
-
-                        if r is not None:
-                            if r.status_code == 200:
-                                st.success(r.json()["message"])
-                                st.caption("Refresh this page after paying to see your updated plan status.")
-                            else:
+            if ENABLE_MPESA and tab_mpesa is not None:
+                with tab_mpesa:
+                    phone = st.text_input("M-Pesa phone number", placeholder="0712345678", key=f"phone_{plan['key']}")
+                    if st.button("Pay with M-Pesa", key=f"mpesa_{plan['key']}", type="primary", width='stretch'):
+                        if not phone:
+                            st.error("Enter your phone number.")
+                        else:
+                            with st.spinner("Sending M-Pesa prompt to your phone..."):
                                 try:
-                                    detail = r.json().get("detail", "Could not start M-Pesa payment.")
-                                except Exception:
-                                    detail = "Could not start M-Pesa payment."
-                                st.error(detail)
+                                    r = requests.post(
+                                        f"{settings.API_BASE_URL}/api/v1/billing/mpesa/stk-push",
+                                        json={"plan": plan["key"], "phone_number": phone},
+                                        headers=headers,
+                                        timeout=30,
+                                    )
+                                except requests.RequestException:
+                                    st.error("Could not reach the server.")
+                                    r = None
+
+                            if r is not None:
+                                if r.status_code == 200:
+                                    st.success(r.json()["message"])
+                                    st.caption("Refresh this page after paying to see your updated plan status.")
+                                else:
+                                    try:
+                                        detail = r.json().get("detail", "Could not start M-Pesa payment.")
+                                    except Exception:
+                                        detail = "Could not start M-Pesa payment."
+                                    st.error(detail)

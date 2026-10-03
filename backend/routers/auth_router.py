@@ -1,12 +1,15 @@
 import logging
+import re
+import secrets
+from urllib.parse import urlencode
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-import requests
-from fastapi.responses import RedirectResponse
-from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from core.clock import utcnow
 from core.config import settings
@@ -25,11 +28,6 @@ from security.auth import (
 from security.deps import get_current_user
 from services.email_service import send_email
 from services.email_templates import password_reset_email, trial_started_email, verification_email
-import re
-import secrets
-from urllib.parse import urlencode
-
-from schemas.auth_schema import Token, UserLogin, UserRead, UserRegister  # already imported
 
 logger = logging.getLogger("veridex.auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -52,6 +50,10 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+
+class GoogleExchangeRequest(BaseModel):
+    code: str
 
 
 @router.post("/register", response_model=UserRead)
@@ -165,6 +167,18 @@ def me(user: User = Depends(get_current_user)):
     return user
 
 
+@router.post("/onboarding/complete")
+def complete_onboarding(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_user = db.get(User, user.id)
+    db_user.onboarding_completed = True
+    db.commit()
+    return {"onboarding_completed": True}
+
+
+# ---------------------------------------------------------------------------
+# Google sign-in
+# ---------------------------------------------------------------------------
+
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
@@ -172,11 +186,8 @@ GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 _state_signer = URLSafeTimedSerializer(settings.SECRET_KEY, salt="google-oauth-state")
 
 
-class GoogleExchangeRequest(BaseModel):
-    code: str
-
-
-def _google_fail(message: str) -> RedirectResponse:
+def _google_fail(message: str, reason: str = "") -> RedirectResponse:
+    logger.warning("Google sign-in failed: %s %s", message, reason)
     return RedirectResponse(f"{FRONTEND_URL}/Login?{urlencode({'google_error': message})}")
 
 
@@ -204,11 +215,12 @@ def google_callback(
     db: Session = Depends(get_db),
 ):
     if error or not code or not state:
-        return _google_fail("Google sign-in was cancelled.")
+        return _google_fail("Google sign-in was cancelled.", f"error={error}")
+
     try:
         _state_signer.loads(state, max_age=600)
     except BadSignature:
-        return _google_fail("Sign-in session expired. Please try again.")
+        return _google_fail("Sign-in session expired. Please try again.", "bad or expired state")
 
     try:
         tok = requests.post(
@@ -236,7 +248,7 @@ def google_callback(
 
     email = (info.get("email") or "").strip().lower()
     if not email or not info.get("email_verified"):
-        return _google_fail("Your Google email is not verified.")
+        return _google_fail("Your Google email is not verified.", f"email={email!r}")
 
     user = user_repo.get_by_email(db, email)
     is_new = False
@@ -246,13 +258,13 @@ def google_callback(
         last = (info.get("family_name") or "-").strip()[:100] or "-"
         base = re.sub(r"[^a-z0-9_.-]", "", email.split("@")[0])[:40] or "user"
         username = base
-        while user_repo.get_by_username(db, username) or len(username) < 3:
+        while len(username) < 3 or user_repo.get_by_username(db, username):
             username = f"{base}{secrets.randbelow(10000)}"
 
         payload = UserRegister(
             email=email,
             username=username,
-            password=secrets.token_urlsafe(32), 
+            password=secrets.token_urlsafe(32),  # unusable random password
             first_name=first,
             last_name=last,
             company_name=f"{first}'s Company",
@@ -262,13 +274,13 @@ def google_callback(
             user = user_repo.create_account(db, payload)
         except IntegrityError:
             db.rollback()
-            return _google_fail("Could not create your account. Please try again.")
+            return _google_fail("Could not create your account. Please try again.", "integrity error")
         is_new = True
 
     if not user.is_active:
         return _google_fail("This account is disabled.")
 
-    user.is_verified = True 
+    user.is_verified = True  
     user.last_login_at = utcnow()
     db.commit()
 
@@ -276,8 +288,8 @@ def google_callback(
         subject, title, body = trial_started_email(user.first_name)
         send_email(user.email, user.first_name, subject, title, body)
 
-        login_code = create_purpose_token(user.id, "google_login")
-        return RedirectResponse(f"{FRONTEND_URL}/Login?{urlencode({'google_code': login_code})}")
+    login_code = create_purpose_token(user.id, "google_login")
+    return RedirectResponse(f"{FRONTEND_URL}/Login?{urlencode({'google_code': login_code})}")
 
 
 @router.post("/google/exchange", response_model=Token)
@@ -292,9 +304,3 @@ def google_exchange(payload: GoogleExchangeRequest, db: Session = Depends(get_db
 
     token = create_access_token(str(user.id), {"cid": user.company_id, "role": user.role})
     return Token(access_token=token, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-@router.post("/onboarding/complete")
-def complete_onboarding(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_user = db.get(User, user.id)
-    db_user.onboarding_completed = True
-    db.commit()
-    return {"onboarding_completed": True}

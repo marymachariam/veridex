@@ -1,20 +1,26 @@
 from enum import Enum
 
+from core.config import settings
+
+
 class CompetitorCategory(str, Enum):
     CRM = "CRM"
     PROJECT_MANAGEMENT = "Project Management"
     COMMUNICATION = "Communication"
     PRODUCTIVITY = "Productivity"
 
+
 class BillingPeriod(str, Enum):
     MONTHLY = "monthly"
     ANNUAL = "annual"
     ONE_TIME = "one_time"
 
+
 class Sentiment(str, Enum):
     POSITIVE = "positive"
     NEUTRAL = "neutral"
     NEGATIVE = "negative"
+
 
 class ReviewSource(str, Enum):
     TRUSTPILOT = "Trustpilot"
@@ -22,6 +28,7 @@ class ReviewSource(str, Enum):
     CAPTERRA = "Capterra"
     APPSTORE = "App Store"
     PLAYSTORE = "Play Store"
+
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -55,11 +62,22 @@ PLAN_LIMITS = {
 class PaymentProvider(str, Enum):
     PAYPAL = "paypal"
     MPESA = "mpesa"
-    
-PAYPAL_PLAN_IDS = {
+
+
+PAYPAL_PLAN_IDS_SANDBOX = {
     "starter": "P-0EV86851H2868743UNK6GV7Y",
     "pro": "P-6W3235281D4709036NK6GWAQ",
 }
+
+PAYPAL_PLAN_IDS_LIVE = {
+    "starter": "P-0XW27824TR9611002NLANT4A",
+    "pro": "P-9JR07381JK5674631NLANT4Q",
+}
+
+PAYPAL_PLAN_IDS = (
+    PAYPAL_PLAN_IDS_SANDBOX if settings.PAYPAL_MODE == "sandbox" else PAYPAL_PLAN_IDS_LIVE
+)
+
 
 class PaymentStatus(str, Enum):
     PENDING = "pending"

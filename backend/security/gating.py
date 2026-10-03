@@ -8,9 +8,9 @@ from database import get_db
 from models.company import Company
 from models.competitor import Competitor
 from models.research_usage import ResearchUsage
+from models.subscription import Subscription
 from models.user import User
 from security.deps import get_current_user
-from models.subscription import Subscription
 
 
 def require_active_subscription(
@@ -23,6 +23,7 @@ def require_active_subscription(
         raise HTTPException(status_code=403, detail="Company not found")
 
     if company.subscription_status == "active":
+        # M-Pesa is pay-per-month (not recurring), so we enforce the paid period ourselves.
         sub = db.scalar(select(Subscription).where(Subscription.company_id == company.id))
         if sub and sub.provider == "mpesa" and sub.current_period_end and sub.current_period_end < utcnow():
             sub.status = "expired"
