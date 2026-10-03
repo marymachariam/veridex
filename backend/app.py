@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from database import Base, engine  
+import models 
 
 from core.config import settings
 from database import get_db
@@ -26,6 +28,8 @@ from routers.assistant_router import router as assistant_router
 
 logging.basicConfig(level=settings.LOG_LEVEL)
 logger = logging.getLogger("veridex")
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.API_TITLE,
