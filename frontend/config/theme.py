@@ -1,0 +1,17 @@
+class Colors:
+    PRIMARY_DARK = "#0F172A"
+    PRIMARY_LIGHT = "#1E293B"
+    ACCENT_BLUE = "#3B82F6"
+    ACCENT_TEAL = "#14B8A6"
+    ACCENT_ORANGE = "#F59E0B"
+    ACCENT_RED = "#EF4444"
+    NEUTRAL_50 = "#F9FAFB"
+    NEUTRAL_200 = "#E5E7EB"
+    NEUTRAL_400 = "#9CA3AF"
+    NEUTRAL_600 = "#4B5563"
+
+class Icons:
+    COMPETITOR = "🏢"
+    PRICING = "💰"
+    REVIEWS = "💬"
+    TRENDING_UP = "📈"

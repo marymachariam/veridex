@@ -1,0 +1,29 @@
+# Secrets and environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+
+# Streamlit secrets (keep .streamlit/config.toml tracked, it hides your sidebar pages)
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archives and tool folders
+*.zip
+.kilo/
