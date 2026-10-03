@@ -15,7 +15,7 @@ from services.scraper_service import scrape_competitor_pages
 logger = logging.getLogger("veridex.research")
 
 MODEL_NAME = "openai/gpt-oss-120b"
-GEMINI_MODEL_NAME = "gemini-2.0-flash"
+GEMINI_MODEL = "GEMINI_MODEL", "gemini-3.8-flash"
 
 MAX_SEARCH_RESULTS = 4
 SNIPPET_CHARS = 500
